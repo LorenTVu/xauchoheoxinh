@@ -1,14 +1,14 @@
-// At the very top of your server.js file
-require("dotenv").config(); // Load environment variables from .env file
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose"); // Import Mongoose
+const mongoose = require("mongoose");
 const app = express();
 const port = process.env.PORT || 5000;
 
 // --- Import Mongoose Models ---
 const Message = require('./models/Message');
+const Ping = require('./models/Ping');
 
 // --- MongoDB Connection ---
 mongoose
@@ -83,6 +83,37 @@ app.get('/api/messages', async (req, res) => {
   } catch (error) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ message: 'Error fetching messages', error: error.message });
+  }
+});
+
+// --- API Routes for Ping ---
+
+// POST /api/ping: Record a "Thought of You" ping
+app.post('/api/ping', async (req, res) => {
+  try {
+    const { sender, recipient } = req.body; // Expecting sender and recipient from frontend
+
+    if (!sender || !recipient) {
+      return res.status(400).json({ message: 'Missing sender or recipient for ping' });
+    }
+
+    const newPing = new Ping({ sender, recipient });
+    await newPing.save();
+    res.status(201).json({ message: `${sender} sent a ping to ${recipient}!`, ping: newPing });
+  } catch (error) {
+    console.error('Error sending ping:', error);
+    res.status(500).json({ message: 'Error sending ping', error: error.message });
+  }
+});
+
+// GET /api/ping: Fetch recent pings (optional, for viewing history)
+app.get('/api/ping', async (req, res) => {
+  try {
+    const pings = await Ping.find().sort({ timestamp: -1 }).limit(10); // Get last 10 pings
+    res.status(200).json(pings);
+  } catch (error) {
+    console.error('Error fetching pings:', error);
+    res.status(500).json({ message: 'Error fetching pings', error: error.message });
   }
 });
 
